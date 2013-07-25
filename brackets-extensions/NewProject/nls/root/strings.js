@@ -38,5 +38,7 @@ define({
     "DIALOG_TITLE"                      : "Create New Project",
     "NO_TEMPLATE_OPTION_LABEL"          : "None (Empty Project)",
     "ERROR_NOT_A_DIRECTORY"             : "Unable to write to {1} because it is not a valid directory, is offline or does not exist.",
-    "ERROR_UNABLE_TO_WRITE_DIRECTORY"   : "unable to write to {1} (Error {0})"
+    "ERROR_UNABLE_TO_WRITE_DIRECTORY"   : "unable to write to {1} (Error {0})",
+    "INVALID_PROJECT_NAME"              : "Invalid Project Name",
+    "INVALID_PROJECGT_NAME_MESSAGE"     : "Project names cannot contain the following characters: /?*:;{}<>\\| or use any system reserved words.",
 });

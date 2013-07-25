@@ -8,9 +8,15 @@
 
 #project-template {
     width: 260px;
-    border: 1px solid #9c9e9e;
+    border: 1px solid rgb(156, 158, 158);
     box-shadow: rgba(0,0,0,0.117647) 0px 1px 0px 0px inset;
     color: rgb(69,69,69);
+    outline: none;
+}
+
+#project-template:focus {
+    box-shadow: rgb(111, 181, 241) 0px 0px 0px 2px;
+    border: 1px solid rgb(9, 64, 253);
 }
 
 #template-part {

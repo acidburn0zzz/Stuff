@@ -52,6 +52,9 @@ define(function (require, exports, module) {
         
     var prefs = PreferencesManager.getPreferenceStorage(module);
 
+    var illegalFilenamesRegEx = /^(\.+|com[1-9]|lpt[1-9]|nul|con|prn|aux)$/i;
+
+    
     function convertUnixPathToWindowsPath(path) {
         if (brackets.platform === "win") {
             path = path.replace(new RegExp(/\//g), "\\");
@@ -138,7 +141,21 @@ define(function (require, exports, module) {
         );
     }
     
-
+    function validateProjectName(projectName) {
+        // Validate file name
+        // Checks for valid Windows filenames:
+        // See http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247(v=vs.85).aspx
+        if ((projectName.search(/[\/?*:;\{\}<>\\|]+/) !== -1) || projectName.match(_illegalFilenamesRegEx)) {
+            Dialogs.showModalDialog(
+                DefaultDialogs.DIALOG_ID_ERROR,
+                ExtensionStrings.INVALID_PROJECT_NAME,
+                ExtensionStrings.INVALID_PROJECGT_NAME_MESSAGE
+            );
+            return false;
+        }
+        return true;
+    }
+    
     function copyFile(destination, inFile) {
         var promise = new $.Deferred(),
             outFile = cannonicalizeDirectoryPath(destination) + getFilenameFromPath(inFile);
@@ -290,6 +307,7 @@ define(function (require, exports, module) {
     
     function handleNewProject(commandData) {
         var $dlg,
+            $OkBtn,
             $changeProjectDirectoryBtn,
             $projectDirectoryInput,
             $projectNameInput,
@@ -325,6 +343,7 @@ define(function (require, exports, module) {
         });
         
         $dlg = dialog.getElement();
+        $OkBtn = $dlg.find(".dialog-button[data-button-id='ok']");
         $changeProjectDirectoryBtn = $("#change-directory", $dlg);
         $projectDirectoryInput = $("#project-directory", $dlg);
         $projectNameInput = $("#project-name", $dlg);
@@ -344,6 +363,14 @@ define(function (require, exports, module) {
             
             e.preventDefault();
             e.stopPropagation();
+        });
+        
+        $OkBtn.click(function(e) {
+            if (!validateProjectName($projectNameInput.val())) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
         });
         
         initProjectTemplates($templateSelect);
