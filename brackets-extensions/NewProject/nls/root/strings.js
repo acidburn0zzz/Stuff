@@ -27,14 +27,16 @@
 /*global define */
 
 define({
-    "MY_DOCUMENTS"              : "My Documents",
-    "DOCUMENTS"                 : "Documents",
-    "MENU_TITLE"                : "New Project...",
-    "NEW_PROJECT_BASE_NAME"     : "Untitled-",
-    "CHANGE"                    : "Change",
-    "PROJECT_DIRECTORY_lABEL"   : "Projects will be Created in this Folder:",
-    "CHOOSE_TEMPLATE_LABEL"     : "Template:",
-    "PROJECT_NAME_LABEL"        : "Name:",
-    "DIALOG_TITLE"              : "Create New Project",
-    "NO_TEMPLATE_OPTION_LABEL"  : "None (Empty Project)"
+    "MY_DOCUMENTS"                      : "My Documents",
+    "DOCUMENTS"                         : "Documents",
+    "MENU_TITLE"                        : "New Project...",
+    "NEW_PROJECT_BASE_NAME"             : "Untitled-",
+    "CHANGE"                            : "Change",
+    "PROJECT_DIRECTORY_lABEL"           : "Projects will be Created in this Folder:",
+    "CHOOSE_TEMPLATE_LABEL"             : "Template:",
+    "PROJECT_NAME_LABEL"                : "Name:",
+    "DIALOG_TITLE"                      : "Create New Project",
+    "NO_TEMPLATE_OPTION_LABEL"          : "None (Empty Project)",
+    "ERROR_NOT_A_DIRECTORY"             : "Unable to write to {1} because it is not a valid directory, is offline or does not exist.",
+    "ERROR_UNABLE_TO_WRITE_DIRECTORY"   : "unable to write to {1} (Error {0})"
 });

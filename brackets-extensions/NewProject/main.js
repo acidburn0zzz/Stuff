@@ -35,10 +35,12 @@ define(function (require, exports, module) {
         ExtensionUtils              = brackets.getModule("utils/ExtensionUtils"),
         AppInit                     = brackets.getModule("utils/AppInit"),
         Strings                     = brackets.getModule("strings"),
+        StringUtils                 = brackets.getModule("utils/StringUtils"),
         SidebarView                 = brackets.getModule("project/SidebarView"),
         Menus                       = brackets.getModule("command/Menus"),
         PopUpManager                = brackets.getModule("widgets/PopUpManager"),
         FileUtils                   = brackets.getModule("file/FileUtils"),
+        DefaultDialogs              = brackets.getModule("widgets/DefaultDialogs"),
         Dialogs                     = brackets.getModule("widgets/Dialogs"),
         NativeFileSystem            = brackets.getModule("file/NativeFileSystem").NativeFileSystem,
         ExtensionStrings            = require("strings"),
@@ -122,13 +124,18 @@ define(function (require, exports, module) {
     }
 
     function showProjectErrorMessage(err, folder, isDirectory) {
-        if (err === brackets.fs.NO_ERROR) {
-            // unable to write to folder because it isn't a directory
-            alert("unable to write to " + folder + " because it isn't a directory");
+        var message;
+        if (err === brackets.fs.NO_ERROR && !isDirectory) {
+            message = ExtensionStrings.ERROR_NOT_A_DIRECTORY;
         } else {
-            // some other error
-            alert("some other error (" + err + ") " + "Writing or something to " + folder);
+            message = ExtensionStrings.ERROR_UNABLE_TO_WRITE_DIRECTORY;
         }
+        
+        Dialogs.showModalDialog(
+            DefaultDialogs.DIALOG_ID_ERROR,
+            ExtensionStrings.DIALOG_TITLE,
+            StringUtils.format(message, err, folder)
+        );
     }
     
 
