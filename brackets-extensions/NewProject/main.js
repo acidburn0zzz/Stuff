@@ -60,7 +60,7 @@ define(function (require, exports, module) {
         return FileUtils.convertWindowsPathToUnixPath(path);
     }
     
-    function cannonicalizeDirectoryName(path) {
+    function cannonicalizeDirectoryPath(path) {
         if (path && path.length) {
             var lastChar = path[path.length - 1];
             if (lastChar !== "/") {
@@ -68,6 +68,19 @@ define(function (require, exports, module) {
             }
         }
         return path;
+    }
+    
+    function getParentDirectory(path) {
+        if (path && path.length) {
+            var lastChar = path[path.length - 1];
+            if (lastChar !== "/") {
+                path = FileUtils.getDirectoryPath(path);
+            } else {
+                path = FileUtils.getDirectoryPath(path.slice(0, -1));
+            }
+        }
+        return path;
+        
     }
     
     function getFilenameFromPath(path) {
@@ -117,9 +130,9 @@ define(function (require, exports, module) {
     }
     
 
-    function copyFile(destinationFolder, inFile) {
+    function copyFile(destination, inFile) {
         var promise = new $.Deferred(),
-            outFile = cannonicalizeDirectoryName(destinationFolder) + getFilenameFromPath(inFile);
+            outFile = cannonicalizeDirectoryPath(destination) + getFilenameFromPath(inFile);
         brackets.fs.stat(outFile, function (err, stats) {
             if (err === brackets.fs.ERR_NOT_FOUND) {
                 brackets.fs.readFile(inFile, "utf8", function (err, data) {
@@ -133,14 +146,15 @@ define(function (require, exports, module) {
         });
         return promise;
     }
-    
-    function copyTemplateFiles(destination) {
+
+
+    function copyDirectory(destination, source) {
         var i,
             completeCount = 0,
             errorCount = 0,
-            promise = new $.Deferred(),
-            templatesFilesFolder = getTemplateFilesFolder();
-        brackets.fs.readdir(templatesFilesFolder, function (err, fileList) {
+            promise = new $.Deferred();
+            
+        brackets.fs.readdir(source, function (err, fileList) {
             if (err === brackets.fs.NO_ERROR) {
                 var failHandler = function () {
                     ++errorCount;
@@ -150,11 +164,30 @@ define(function (require, exports, module) {
                         promise.resolve(errorCount);
                     }
                 };
+                
+                var doCopy = function (destination, source) {
+                    brackets.fs.stat(source, function (err, stats) {
+                        if (stats.isFile()) {
+                            copyFile(destination, source)
+                                .fail(failHandler)
+                                .always(alwaysHandler);
+                        } else if (stats.isDirectory()) {
+                            destination = cannonicalizeDirectoryPath(destination) + getFilenameFromPath(source);
+                            brackets.fs.makedir(destination, 777, function (err) {
+                                if (err === brackets.fs.NO_ERROR) {
+                                    copyDirectory(destination, source)
+                                        .fail(failHandler)
+                                        .always(alwaysHandler);
+                                } else {
+                                    ++errorCount;
+                                }
+                            });
+                        }
+                    });
+                };
+                
                 for (i = 0; i < fileList.length; i++) {
-                    copyFile(destination, cannonicalizeDirectoryName(templatesFilesFolder) + fileList[i])
-                        .fail(failHandler)
-                        .always(alwaysHandler);
-
+                    doCopy(destination, cannonicalizeDirectoryPath(source) + fileList[i]);
                 }
             } else {
                 promise.reject(err);
@@ -163,12 +196,17 @@ define(function (require, exports, module) {
         
         return promise;
     }
+    
+    function copyTemplateFiles(destination, templateName) {
+        var templatesFilesFolder = cannonicalizeDirectoryPath(getTemplateFilesFolder()) + templateName;
+        return copyDirectory(destination, templatesFilesFolder);
+    }
 
-    function createProjectFolder(projectFolder) {
+    function createProjectFolder(projectFolder, templateName) {
         var promise = new $.Deferred();
         brackets.fs.makedir(projectFolder, 777, function (err) {
             if (err === brackets.fs.NO_ERROR) {
-                copyTemplateFiles(projectFolder)
+                copyTemplateFiles(projectFolder, templateName)
                     .done(function () {
                         promise.resolve();
                     })
@@ -185,11 +223,13 @@ define(function (require, exports, module) {
     }
     
     
-    function createNewProject(parentFolder, projectFolder) {
-        var promise = new $.Deferred();
+    function createNewProject(projectFolder, templateName) {
+        var parentFolder = getParentDirectory(projectFolder),
+            promise = new $.Deferred();
+        
         brackets.fs.stat(parentFolder, function (err, stats) {
             if (err === brackets.fs.NO_ERROR && stats.isDirectory()) {
-                createProjectFolder(projectFolder)
+                createProjectFolder(projectFolder, templateName)
                     .done(function () {
                         promise.resolve();
                     })
@@ -205,7 +245,7 @@ define(function (require, exports, module) {
     }
     
     function openIndexFile(destination) {
-        var indexFilename = cannonicalizeDirectoryName(destination) + "index.html";
+        var indexFilename = cannonicalizeDirectoryPath(destination) + "index.html";
         brackets.fs.stat(indexFilename, function (err, stats) {
             if (err === brackets.fs.NO_ERROR && stats.isFile()) {
                 CommandManager.execute(Commands.FILE_ADD_TO_WORKING_SET, { fullPath: indexFilename });
@@ -214,11 +254,37 @@ define(function (require, exports, module) {
 
     }
     
+    function addTemplateFromDirectoryEntry($templateSelect, directoryName) {
+        var templatesFilesFolder = getTemplateFilesFolder();
+        
+        var addTemplateDirectory = function (err, stats) {
+            if (stats.isDirectory()) {
+                $templateSelect.append("<option id=\"" + directoryName + "\">" + directoryName + "</option>");
+            }
+        };
+        brackets.fs.stat(cannonicalizeDirectoryPath(templatesFilesFolder) + directoryName, addTemplateDirectory);
+        
+    }
+    
+    function initProjectTemplates($templateSelect) {
+        var i,
+            templatesFilesFolder = getTemplateFilesFolder();
+        brackets.fs.readdir(templatesFilesFolder, function (err, fileList) {
+            if (err === brackets.fs.NO_ERROR) {
+                
+                for (i = 0; i < fileList.length; i++) {
+                    addTemplateFromDirectoryEntry($templateSelect, fileList[i]);
+                }
+            }
+        });
+    }
+    
     function handleNewProject(commandData) {
         var $dlg,
             $changeProjectDirectoryBtn,
             $projectDirectoryInput,
             $projectNameInput,
+            $templateSelect,
             newProjectOrdinal = prefs.getValue("newProjectOrdinal") || 1,
             defaultProjectName = "Untitled-" +  newProjectOrdinal.toString(),
             prefsNewProjectFolder = prefs.getValue("newProjectsFolder"),
@@ -226,7 +292,7 @@ define(function (require, exports, module) {
         
         var context = {
             Strings: Strings,
-            PROJECT_DIRECTORY: prefsNewProjectFolder || newProjectFolder,
+            PROJECT_DIRECTORY: convertUnixPathToWindowsPath(prefsNewProjectFolder || newProjectFolder),
             NEXT_NEW_PROJECT_NAME: defaultProjectName
         };
         
@@ -236,9 +302,10 @@ define(function (require, exports, module) {
             if (buttonId === "ok") {
                 var projectFolder = convertWindowsPathToUnixPath($projectDirectoryInput.val()),
                     projectName = $projectNameInput.val(),
-                    destination = projectFolder + "/" + ((projectName.length > 0) ? projectName : defaultProjectName);
+                    destination = projectFolder + "/" + ((projectName.length > 0) ? projectName : defaultProjectName),
+                    templateName = $templateSelect.val();
 
-                createNewProject(projectFolder, destination).done(function () {
+                createNewProject(destination, templateName).done(function () {
                     ProjectManager.openProject(destination).done(function () {
                         openIndexFile(destination);
                     });
@@ -251,6 +318,7 @@ define(function (require, exports, module) {
         $changeProjectDirectoryBtn = $("#change-directory", $dlg);
         $projectDirectoryInput = $("#project-directory", $dlg);
         $projectNameInput = $("#project-name", $dlg);
+        $templateSelect = $("#project-template", $dlg);
         
         $changeProjectDirectoryBtn.click(function (e) {
             NativeFileSystem.showOpenDialog(false, true, Strings.CHOOSE_FOLDER, newProjectFolder, null,
@@ -267,6 +335,8 @@ define(function (require, exports, module) {
             e.preventDefault();
             e.stopPropagation();
         });
+        
+        initProjectTemplates($templateSelect);
     }
     
     ExtensionUtils.loadStyleSheet(module, "styles/styles.css");

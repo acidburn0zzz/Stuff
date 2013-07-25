@@ -2,6 +2,25 @@
     width: 485px;
 }
 
-.new-project-dialog input {
+#project-name {
+    width: 200px;
+}
+
+#project-template {
+    width: 260px;
+    border: 1px solid #9c9e9e;
+    box-shadow: rgba(0,0,0,0.117647) 0px 1px 0px 0px inset;
+    color: rgb(69,69,69);
+}
+
+#template-part {
+    float: right;
+    margin-right: 8px;
+}
+
+.new-project-dialog input, .new-project-dialog select {
     margin: 2px 0;
 }
+
+
+

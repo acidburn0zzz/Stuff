@@ -4,7 +4,10 @@
     </div>
     <div class="modal-body">
         <div class="field-container input-field">
-            <p>Name of the new Project:&nbsp;<input type="text" placeholder="{{NEXT_NEW_PROJECT_NAME}}" id="project-name"/></p>
+            <p>Name:&nbsp;<input type="text" placeholder="{{NEXT_NEW_PROJECT_NAME}}" id="project-name"/>
+            <span id="template-part">Template:&nbsp;<select id="project-template" required>
+                <option id="none">None (Empty Project)</option>
+            </select></span></p>
         </div>
         <div class="field-container input-field">
             <p>Projects will be Created in this Folder:</p>
