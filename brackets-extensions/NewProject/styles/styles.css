@@ -1,5 +1,7 @@
 #project-directory {
     width: 485px;
-    margin: 2px 0;
 }
 
+.new-project-dialog input {
+    margin: 2px 0;
+}

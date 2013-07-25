@@ -219,7 +219,7 @@ define(function (require, exports, module) {
             $changeProjectDirectoryBtn,
             $projectDirectoryInput,
             $projectNameInput,
-            newProjectOrdinal = prefs.getValue("newProjectOrdiinal") || 1,
+            newProjectOrdinal = prefs.getValue("newProjectOrdinal") || 1,
             defaultProjectName = "Untitled-" +  newProjectOrdinal.toString(),
             prefsNewProjectFolder = prefs.getValue("newProjectsFolder"),
             newProjectFolder = getUserDocumentsFolder();
