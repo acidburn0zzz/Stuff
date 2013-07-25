@@ -41,6 +41,7 @@ define(function (require, exports, module) {
         FileUtils                   = brackets.getModule("file/FileUtils"),
         Dialogs                     = brackets.getModule("widgets/Dialogs"),
         NativeFileSystem            = brackets.getModule("file/NativeFileSystem").NativeFileSystem,
+        ExtensionStrings            = require("strings"),
         NewProjectDialogTemplate    = require("text!htmlContent/New-Project-Dialog.html");
     
 
@@ -107,13 +108,14 @@ define(function (require, exports, module) {
     }
     
     function getUserDocumentsFolder() {
+        // TODO: Move this to the shell
         var home = getUserHomeDirectory(),
             documents;
         
         if (isLegacyWindowsVersion()) {
-            documents = home + "/My Documents";
+            documents = home + "/" + ExtensionStrings.MY_DOCUMENTS;
         } else {
-            documents = home + "/Documents";
+            documents = home + "/" + ExtensionStrings.DOCUMENTS;
         }
         
         return documents;
@@ -286,12 +288,13 @@ define(function (require, exports, module) {
             $projectNameInput,
             $templateSelect,
             newProjectOrdinal = prefs.getValue("newProjectOrdinal") || 1,
-            defaultProjectName = "Untitled-" +  newProjectOrdinal.toString(),
+            defaultProjectName = ExtensionStrings.NEW_PROJECT_BASE_NAME +  newProjectOrdinal.toString(),
             prefsNewProjectFolder = prefs.getValue("newProjectsFolder"),
             newProjectFolder = getUserDocumentsFolder();
         
         var context = {
             Strings: Strings,
+            ExtensionStrings: ExtensionStrings,
             PROJECT_DIRECTORY: convertUnixPathToWindowsPath(prefsNewProjectFolder || newProjectFolder),
             NEXT_NEW_PROJECT_NAME: defaultProjectName
         };
@@ -302,7 +305,7 @@ define(function (require, exports, module) {
             if (buttonId === "ok") {
                 var projectFolder = convertWindowsPathToUnixPath($projectDirectoryInput.val()),
                     projectName = $projectNameInput.val(),
-                    destination = projectFolder + "/" + ((projectName.length > 0) ? projectName : defaultProjectName),
+                    destination = cannonicalizeDirectoryPath(projectFolder) + ((projectName.length > 0) ? projectName : defaultProjectName),
                     templateName = $templateSelect.val();
 
                 createNewProject(destination, templateName).done(function () {
@@ -340,7 +343,7 @@ define(function (require, exports, module) {
     }
     
     ExtensionUtils.loadStyleSheet(module, "styles/styles.css");
-    CommandManager.register("New Project...", FILE_NEW_PROJECT, handleNewProject);
+    CommandManager.register(ExtensionStrings.MENU_TITLE, FILE_NEW_PROJECT, handleNewProject);
     var menu = Menus.getMenu(Menus.AppMenuBar.FILE_MENU);
     menu.addMenuItem(FILE_NEW_PROJECT, undefined, Menus.AFTER, Commands.FILE_NEW_UNTITLED);
 
