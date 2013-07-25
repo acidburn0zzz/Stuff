@@ -56,60 +56,49 @@ define(function (require, exports, module) {
         return path;
     }
     
+    function convertWindowsPathToUnixPath(path) {
+        return FileUtils.convertWindowsPathToUnixPath(path);
+    }
+    
     function cannonicalizeDirectoryName(path) {
         if (path && path.length) {
             var lastChar = path[path.length - 1];
-            if (brackets.platform === "win") {
-                if (lastChar !== "\\") {
-                    path += "\\";
-                }
-            } else {
-                if (lastChar !== "/") {
-                    path += "/";
-                }
+            if (lastChar !== "/") {
+                path += "/";
             }
         }
         return path;
     }
     
     function getFilenameFromPath(path) {
-        var searchChar = "/";
-        if (brackets.platform === "win") {
-            searchChar = "\\";
-        }
-        
-        return path.substr(path.lastIndexOf(searchChar) + 1);
+        return FileUtils.getBaseName(path);
     }
-        
     
     function isLegacyWindowsVersion() {
         return (navigator.userAgent.indexOf("Winodws NT 5.") !== -1);
     }
     
     function getUserHomeDirectory() {
-        var folder = brackets.app.getApplicationSupportDirectory();
+        var parts = 2,
+            folder = brackets.app.getApplicationSupportDirectory();
+        
         if (brackets.platform === "win") {
-            folder = convertUnixPathToWindowsPath(folder);
-            return folder.split("\\").slice(0, 3).join("\\");
-        } else {
-            return "/" + folder.split("/").slice(0, 2).join("/");
+            parts = 3;
         }
+        return "/" + folder.split("/").slice(0, parts).join("/");
+        
     }
 
     function getTemplateFilesFolder() {
-        return convertUnixPathToWindowsPath(brackets.app.getApplicationSupportDirectory() + "/extensions/user/newproject/templateFiles");
+        return brackets.app.getApplicationSupportDirectory() + "/extensions/user/newproject/templateFiles";
     }
     
     function getUserDocumentsFolder() {
         var home = getUserHomeDirectory(),
             documents;
         
-        if (brackets.platform === "win") {
-            if (isLegacyWindowsVersion()) {
-                documents = home + "\\My Documents";
-            } else {
-                documents = home + "\\Documents";
-            }
+        if (isLegacyWindowsVersion()) {
+            documents = home + "/My Documents";
         } else {
             documents = home + "/Documents";
         }
@@ -130,10 +119,10 @@ define(function (require, exports, module) {
 
     function copyFile(destinationFolder, inFile) {
         var promise = new $.Deferred(),
-            outFile = cannonicalizeDirectoryName(convertUnixPathToWindowsPath(destinationFolder)) + getFilenameFromPath(convertUnixPathToWindowsPath(inFile));
+            outFile = cannonicalizeDirectoryName(destinationFolder) + getFilenameFromPath(inFile);
         brackets.fs.stat(outFile, function (err, stats) {
             if (err === brackets.fs.ERR_NOT_FOUND) {
-                brackets.fs.readFile(convertUnixPathToWindowsPath(inFile), "utf8", function (err, data) {
+                brackets.fs.readFile(inFile, "utf8", function (err, data) {
                     brackets.fs.writeFile(outFile, data, "utf8", function (err) {
                         promise.resolve(err);
                     });
@@ -151,7 +140,7 @@ define(function (require, exports, module) {
             errorCount = 0,
             promise = new $.Deferred(),
             templatesFilesFolder = getTemplateFilesFolder();
-        brackets.fs.readdir(convertUnixPathToWindowsPath(templatesFilesFolder), function (err, fileList) {
+        brackets.fs.readdir(templatesFilesFolder, function (err, fileList) {
             if (err === brackets.fs.NO_ERROR) {
                 var failHandler = function () {
                     ++errorCount;
@@ -177,7 +166,7 @@ define(function (require, exports, module) {
 
     function createProjectFolder(projectFolder) {
         var promise = new $.Deferred();
-        brackets.fs.makedir(convertUnixPathToWindowsPath(projectFolder), 777, function (err) {
+        brackets.fs.makedir(projectFolder, 777, function (err) {
             if (err === brackets.fs.NO_ERROR) {
                 copyTemplateFiles(projectFolder)
                     .done(function () {
@@ -196,9 +185,9 @@ define(function (require, exports, module) {
     }
     
     
-    function createNewProject(documentsFolder, projectFolder) {
+    function createNewProject(parentFolder, projectFolder) {
         var promise = new $.Deferred();
-        brackets.fs.stat(documentsFolder, function (err, stats) {
+        brackets.fs.stat(parentFolder, function (err, stats) {
             if (err === brackets.fs.NO_ERROR && stats.isDirectory()) {
                 createProjectFolder(projectFolder)
                     .done(function () {
@@ -216,10 +205,10 @@ define(function (require, exports, module) {
     }
     
     function openIndexFile(destination) {
-        var indexFilename = cannonicalizeDirectoryName(convertUnixPathToWindowsPath(destination)) + "index.html";
+        var indexFilename = cannonicalizeDirectoryName(destination) + "index.html";
         brackets.fs.stat(indexFilename, function (err, stats) {
             if (err === brackets.fs.NO_ERROR && stats.isFile()) {
-                CommandManager.execute(Commands.FILE_ADD_TO_WORKING_SET, { fullPath: FileUtils.convertWindowsPathToUnixPath(indexFilename) });
+                CommandManager.execute(Commands.FILE_ADD_TO_WORKING_SET, { fullPath: indexFilename });
             }
         });
 
@@ -235,10 +224,6 @@ define(function (require, exports, module) {
             prefsNewProjectFolder = prefs.getValue("newProjectsFolder"),
             newProjectFolder = getUserDocumentsFolder();
         
-        if (prefsNewProjectFolder) {
-            prefsNewProjectFolder = convertUnixPathToWindowsPath(prefsNewProjectFolder);
-        }
-        
         var context = {
             Strings: Strings,
             PROJECT_DIRECTORY: prefsNewProjectFolder || newProjectFolder,
@@ -249,7 +234,7 @@ define(function (require, exports, module) {
         
         dialog.done(function (buttonId) {
             if (buttonId === "ok") {
-                var projectFolder = FileUtils.convertWindowsPathToUnixPath($projectDirectoryInput.val()),
+                var projectFolder = convertWindowsPathToUnixPath($projectDirectoryInput.val()),
                     projectName = $projectNameInput.val(),
                     destination = projectFolder + "/" + ((projectName.length > 0) ? projectName : defaultProjectName);
 
@@ -271,8 +256,8 @@ define(function (require, exports, module) {
             NativeFileSystem.showOpenDialog(false, true, Strings.CHOOSE_FOLDER, newProjectFolder, null,
                 function (files) {
                     if (files.length > 0 && files[0].length > 0) {
-                        newProjectFolder = convertUnixPathToWindowsPath(files[0]);
-                        $projectDirectoryInput.val(newProjectFolder);
+                        newProjectFolder = files[0];
+                        $projectDirectoryInput.val(convertUnixPathToWindowsPath(newProjectFolder));
                         prefs.setValue("newProjectsFolder", newProjectFolder);
                     }
                 },
